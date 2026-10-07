@@ -34,8 +34,7 @@ const F = {
   hint:"22px Arial", upgTitle:"bold 44px Arial", upg:"bold 20px Arial",
   upgDesc:"15px Arial", menu:"bold 28px Arial", boss:"bold 26px Arial",
   col:"bold 18px Arial", dmg:"bold 20px Arial", combo:"bold 44px Arial",
-  announce:"bold 54px Arial", achv:"bold 22px Arial",
-  bigMenu:"bold 36px Arial"
+  announce:"bold 54px Arial", achv:"bold 22px Arial", bigMenu:"bold 36px Arial"
 };
 
 const Snd = {
@@ -67,7 +66,6 @@ const Snd = {
   gameOver(){this.tone(400,0.25,'sawtooth',0.15,80); setTimeout(()=>this.tone(200,0.5,'sawtooth',0.15,50),250);},
   victory(){[523,659,784,1047].forEach((f,i)=>setTimeout(()=>this.tone(f,0.18,'triangle',0.15),i*120));},
   shield(){this.tone(1200,0.1,'sine',0.12,1800);},
-  comboup(){this.tone(660,0.06,'sine',0.08,880);},
   click(){this.tone(600,0.04,'square',0.06,400);},
   achv(){[523,659,784,1047,1319].forEach((f,i)=>setTimeout(()=>this.tone(f,0.12,'triangle',0.15),i*70));},
   rage(){this.tone(150,0.4,'sawtooth',0.16,60);},
@@ -197,7 +195,7 @@ function makeRushBg() {
   const g = c.createLinearGradient(0,0,0,H);
   g.addColorStop(0,'rgb(20,0,40)'); g.addColorStop(0.5,'rgb(60,0,80)'); g.addColorStop(1,'rgb(30,0,50)');
   c.fillStyle=g; c.fillRect(0,0,W,H);
-  for(let i=0;i<80;i++){
+  for(let i=0;i<120;i++){
     const x=Math.random()*W, y=Math.random()*H, r=Math.random()*2+0.5;
     c.fillStyle=`rgba(255,255,255,${Math.random()*0.7+0.2})`;
     c.beginPath(); c.arc(x,y,r,0,Math.PI*2); c.fill();
@@ -282,7 +280,8 @@ const Game = {
   rageActive:false, rageTimer:0, rageActivated:0,
   paused:false, muted:false, hintTimer:6,
   bossTintColor:null, bossTintAmount:0,
-  rushBossNumber:0, bossRushStart:0
+  rushBossNumber:0,
+  pendingBossSpawn:false
 };
 let dragTargetX=null;
 
@@ -347,16 +346,17 @@ function startPlay(mode){
   Game.combo=0; Game.comboTimer=0; Game.maxCombo=0; Game.totalKills=0;
   Game.rageActive=false; Game.rageTimer=0; Game.paused=false;
   Game.bossTintColor=null; Game.bossTintAmount=0; Game.hintTimer=6;
-  Game.rushBossNumber=0; Game.bossRushStart=performance.now();
+  Game.rushBossNumber=0;
+  Game.pendingBossSpawn=false;
   dragTargetX=null;
   particles.length=0; floatTexts.length=0; achvPopups.length=0;
   if(Game.mode==='bossrush'){
-    // В Boss Rush сразу ослабленная пушка и первый босс
     Game.cannon.baseCooldown = 5;
-    Game.cannon.damage = 1;
-    Game.cannon.multishot = 1;
-    Game.cannon.bulletSpeed = 13;
-    Game.bossRushNextBoss();
+    Game.cannon.damage = 3;
+    Game.cannon.multishot = 2;
+    Game.cannon.bulletSpeed = 14;
+    Game.cannon.bulletRadius = 7;
+    bossRushNextBoss();
     Snd.bossRushStart();
     announce("BOSS RUSH!", "#ff3c3c", 2.5);
   } else {
@@ -366,6 +366,23 @@ function startPlay(mode){
 function announce(text,color,dur){
   Game.announceText=text; Game.announceColor=color||'#fff';
   Game.announceTimer=dur||2;
+}
+function bossRushNextBoss(){
+  Game.rushBossNumber++;
+  Game.bossLevel = Game.rushBossNumber;
+  const lvl = Game.rushBossNumber;
+  const bossType = BOSS_TYPES[(lvl-1) % BOSS_TYPES.length];
+  const isFinal = lvl >= 25;
+  const b = new Boss(lvl, Game.cannon.upgradesCount, isFinal?FINAL_BOSS:bossType, isFinal);
+  b.hpMax = Math.floor(b.hpMax * (1 + lvl*0.02));
+  b.hp = b.hpMax;
+  b.shootInterval = Math.max(75, 170 - lvl*3);
+  b.shootTimer = b.shootInterval;
+  Game.boss = b;
+  Game.bossProjectiles = [];
+  Game.bossTintColor = b.bossType.color;
+  Game.bossTintAmount = 0.15;
+  announce("БОСС #" + lvl, b.bossType.aura, 1.5);
 }
 
 class Ball{
@@ -447,15 +464,15 @@ class Boss{
     this.attackKind=this.bossType.attack;
     this.r=isFinal?100:80;
     this.x=W/2; this.y=-this.r-20;
-    const baseSpeed=1.6+level*0.25+this.upgradesCount*0.06;
+    const baseSpeed=1.4+level*0.15+this.upgradesCount*0.04;
     this.vx=baseSpeed*(isFinal?1.15:1.0);
-    let baseHp=50+level*30;
-    const mult=1+this.upgradesCount*0.15;
-    if(isFinal) baseHp=350;
+    let baseHp=40+level*22;
+    const mult=1+this.upgradesCount*0.1;
+    if(isFinal) baseHp=280;
     this.hpMax=Math.floor(baseHp*mult); this.hp=this.hpMax;
-    let baseInterval=130-level*8-this.upgradesCount*3;
-    if(isFinal) baseInterval=55;
-    this.shootInterval=Math.max(40,baseInterval);
+    let baseInterval=140-level*6-this.upgradesCount*2;
+    if(isFinal) baseInterval=70;
+    this.shootInterval=Math.max(50,baseInterval);
     this.shootTimer=this.shootInterval;
     this.hitFlash=0; this.entered=false;
     this.phase=1;
@@ -470,17 +487,17 @@ class Boss{
     if(this.x-this.r<20){ this.x=20+this.r; this.vx=Math.abs(this.vx); }
     if(this.x+this.r>W-20){ this.x=W-20-this.r; this.vx=-Math.abs(this.vx); }
     if(!this.entered){
-      this.y+=3*dt*60;
+      this.y+=2*dt*60;
       if(this.y>=150){ this.y=150; this.entered=true; }
     } else {
       this.y=150+Math.sin(performance.now()*0.0015)*15;
-      this.y+=0.08*dt*60;
+      this.y+=0.05*dt*60;
     }
     if(this.hitFlash>0) this.hitFlash--;
     if(this.entered){
       this.shootTimer-=dt*60;
       if(this.shootTimer<=0){
-        this.shootTimer = this.shootInterval * (this.phase===2?0.7:1);
+        this.shootTimer = this.shootInterval * (this.phase===2?0.8:1);
         this.shoot(cx,cy,projectiles);
       }
     }
@@ -488,7 +505,7 @@ class Boss{
   shoot(cx,cy,projectiles){
     const dx=cx-this.x, dy=cy-this.y;
     const dist=Math.hypot(dx,dy)||1;
-    const baseSpeed=3.5+this.level*0.2+this.upgradesCount*0.08;
+    const baseSpeed=3.0+this.level*0.15+this.upgradesCount*0.06;
     const ax=this.x, ay=this.y+this.r*0.6;
     const k=this.attackKind;
     if(k==="poison"){
@@ -502,7 +519,7 @@ class Boss{
       for(const off of [-0.25,0,0.25]){ const ang=Math.atan2(dy,dx)+off;
         projectiles.push(new BossProjectile(ax,ay,Math.cos(ang)*baseSpeed*0.8,Math.sin(ang)*baseSpeed*0.8,"fire",9)); }
     } else if(k==="lightning"){
-      projectiles.push(new BossProjectile(ax,ay,dx/dist*baseSpeed*1.5,dy/dist*baseSpeed*1.5,"lightning",8));
+      projectiles.push(new BossProjectile(ax,ay,dx/dist*baseSpeed*1.3,dy/dist*baseSpeed*1.3,"lightning",8));
     } else if(k==="final"){
       const kinds=["poison","fire","lightning","freeze","dark"];
       const sh=kinds.slice().sort(()=>Math.random()-0.5);
@@ -535,7 +552,7 @@ class Cannon{
   constructor(){
     this.w=110; this.h=110;
     this.x=W/2; this.y=H-110;
-    this.speed=9;
+    this.speed=10;
     this.shootCooldown=0; this.muzzleFlash=0;
     this.baseCooldown=6; this.bulletSpeed=12; this.bulletRadius=6;
     this.damage=1; this.multishot=1; this.pierce=0; this.spread=0.25;
@@ -544,7 +561,7 @@ class Cannon{
     this.freezeChance=0; this.poisonTimer=0; this.shield=0;
     this.luckyMult=1.0; this.slowMult=1.0; this.dmgBossMult=1.0;
     this.lifesteal=false; this.upgradesCount=0;
-    this.freezePlayerTimer=0; this.image=null;
+    this.freezePlayerTimer=0;
   }
   update(targetX){
     let sp=this.speed;
@@ -574,7 +591,7 @@ class Cannon{
       case "freeze": this.freezeChance=Math.min(0.9,this.freezeChance+0.25); break;
       case "poison": this.poisonTimer+=120; break;
       case "move": this.speed+=2; break;
-      case "shield": this.shield++; Game.shieldTaken=1; break;
+      case "shield": this.shield++; break;
       case "lifesteal": this.lifesteal=true; break;
       case "lucky": this.luckyMult+=0.5; break;
       case "slow": this.slowMult*=0.75; break;
@@ -615,20 +632,13 @@ class Cannon{
   draw(c){
     const skinColor = getSkinColor();
     const glow = getSkin().glow;
-    if(this.image){
-      c.save(); c.shadowColor = Game.rageActive ? '#ff0000' : glow;
-      c.shadowBlur = Game.rageActive ? 35 : 18;
-      c.drawImage(this.image,this.x-this.w/2,this.y-this.h/2,this.w,this.h);
-      c.restore();
-    } else {
-      c.save();
-      if(skinColor){ c.shadowColor = Game.rageActive ? '#ff0000' : glow; c.shadowBlur = Game.rageActive ? 30 : 15; }
-      c.fillStyle = skinColor || '#34495e';
-      c.fillRect(this.x-this.w/2, this.y-this.h/2, this.w, this.h);
-      c.restore();
-      c.fillStyle = skinColor || '#2c3e50';
-      c.fillRect(this.x-8, this.y-this.h, 16, this.h);
-    }
+    c.save();
+    if(skinColor){ c.shadowColor = Game.rageActive ? '#ff0000' : glow; c.shadowBlur = Game.rageActive ? 30 : 15; }
+    c.fillStyle = skinColor || '#34495e';
+    c.fillRect(this.x-this.w/2, this.y-this.h/2, this.w, this.h);
+    c.restore();
+    c.fillStyle = skinColor || '#2c3e50';
+    c.fillRect(this.x-8, this.y-this.h, 16, this.h);
     if(Game.rageActive){
       const t=performance.now()*0.005;
       const r=Math.floor(128+127*Math.sin(t));
@@ -652,33 +662,17 @@ class Cannon{
     }
   }
 }
-function bossRushNextBoss(){
-  Game.rushBossNumber++;
-  Game.bossLevel = Game.rushBossNumber;
-  const lvl = Game.rushBossNumber;
-  // Чередуем боссов
-  const bossType = BOSS_TYPES[(lvl-1) % BOSS_TYPES.length];
-  const isFinal = lvl >= 25;
-  const b = new Boss(lvl, Game.cannon.upgradesCount, isFinal?FINAL_BOSS:bossType, isFinal);
-  // Дополнительное усиление в Boss Rush
-  b.hpMax = Math.floor(b.hpMax * (1 + lvl*0.05));
-  b.hp = b.hpMax;
-  b.shootInterval = Math.max(30, b.shootInterval - lvl*2);
-  Game.boss = b;
-  Game.bossProjectiles = [];
-  Game.bossTintColor = b.bossType.color;
-  Game.bossTintAmount = 0.15;
-  announce("БОСС #" + lvl, b.bossType.aura, 1.5);
-}
 
-const BTN = { pause:{x:W-90,y:15,w:75,h:75}, cam:{x:W-90,y:100,w:75,h:75} };
+const BTN = { pause:{x:W-90,y:15,w:75,h:75} };
+
+function getPos(cx,cy){ const r=canvas.getBoundingClientRect();
+  return {x:(cx-r.left)*(W/r.width), y:(cy-r.top)*(H/r.height)}; }
 
 function handlePointerDown(x,y){
-  const inBtn=(b)=>x>=b.x&&x<=b.x+b.w&&y>=b.y&&y<=b.y+b.h;
+  const inBtn=(bx,by,bw,bh)=>x>=bx&&x<=bx+bw&&y>=by&&y<=by+bh;
   if(Game.state==='splash'&&Game.stateTime>400){ Game.state='menu'; Game.stateTime=0; Snd.click(); return true; }
   if(Game.state==='menu'){
-    if(inBtn({x:W-90,y:15,w:75,h:75})){ Game.muted=!Game.muted; Snd.muted=Game.muted; saveAll(); return true; }
-    // Кнопки: Классика, Boss Rush, Коллекция, Достижения, Магазин, Выход
+    if(inBtn(W-90,15,75,75)){ Game.muted=!Game.muted; Snd.muted=Game.muted; saveAll(); return true; }
     const bw=440, bh=65, gap=15;
     const cx=W/2, sy=H/2-190;
     const buttons=[
@@ -741,28 +735,21 @@ function handlePointerDown(x,y){
     return true;
   }
   if(Game.state==='play'&&Game.paused){
-    if(x>=W/2-150&&x<=W/2+150&&y>=H/2-60&&y<=H/2){
-      Game.paused=false; Snd.click(); return true; }
-    if(x>=W/2-150&&x<=W/2+150&&y>=H/2+20&&y<=H/2+80){
-      Game.paused=false; Game.state='menu'; Game.stateTime=0; Snd.click(); return true; }
+    if(inBtn(W/2-150,H/2-60,300,60)){ Game.paused=false; Snd.click(); return true; }
+    if(inBtn(W/2-150,H/2+20,300,60)){ Game.paused=false; Game.state='menu'; Game.stateTime=0; Snd.click(); return true; }
     return false;
   }
   if(Game.state==='play'&&Game.gameOver){
-    if(x>=W/2-150&&x<=W/2+150&&y>=H/2+70&&y<=H/2+130){
-      Game.state='menu'; Game.stateTime=0; Snd.click(); return true; }
-    if(x>=W/2-150&&x<=W/2+150&&y>=H/2+150&&y<=H/2+210){
-      startPlay(Game.mode); Snd.click(); return true; }
+    if(inBtn(W/2-150,H/2+70,300,60)){ Game.state='menu'; Game.stateTime=0; Snd.click(); return true; }
+    if(inBtn(W/2-150,H/2+150,300,60)){ startPlay(Game.mode); Snd.click(); return true; }
     return false;
   }
   if(Game.state==='play'&&!Game.gameOver){
-    if(inBtn(BTN.pause)){ Game.paused=true; Snd.click(); return true; }
-    if(inBtn(BTN.cam)){ /* нет filePicker в мобильной */ return true; }
+    if(inBtn(BTN.pause.x,BTN.pause.y,BTN.pause.w,BTN.pause.h)){ Game.paused=true; Snd.click(); return true; }
     return false;
   }
   return false;
 }
-function getPos(cx,cy){ const r=canvas.getBoundingClientRect();
-  return {x:(cx-r.left)*(W/r.width), y:(cy-r.top)*(H/r.height)}; }
 
 canvas.addEventListener('touchstart', e=>{
   Snd.init();
@@ -787,11 +774,7 @@ canvas.addEventListener('touchmove', e=>{
     dragTargetX=Math.max(Game.cannon.w/2, Math.min(W-Game.cannon.w/2, dragTargetX+dx));
   }
 }, {passive:false});
-canvas.addEventListener('touchend', e=>{
-  e.preventDefault();
-  Game.pointer.down=false;
-  dragTargetX=null;
-}, {passive:false});
+canvas.addEventListener('touchend', e=>{ e.preventDefault(); Game.pointer.down=false; dragTargetX=null; }, {passive:false});
 canvas.addEventListener('touchcancel', ()=>{ Game.pointer.down=false; dragTargetX=null; });
 
 function update(dt){
@@ -813,6 +796,12 @@ function update(dt){
   if(Game.bossTintAmount>0 && !Game.boss) Game.bossTintAmount=Math.max(0,Game.bossTintAmount-dt*0.5);
   if(Game.hintTimer>0) Game.hintTimer-=dt;
 
+  // ФИКС: спавн следующего босса в Boss Rush после выбора улучшения
+  if(Game.pendingBossSpawn && Game.state==='play' && !Game.boss && !Game.gameOver){
+    Game.pendingBossSpawn=false;
+    bossRushNextBoss();
+  }
+
   if(Game.state==='splash'){ if(Game.stateTime>=1900){ Game.state='menu'; Game.stateTime=0; } return; }
   if(Game.state!=='play' || Game.paused) return;
   const cannon=Game.cannon;
@@ -821,7 +810,6 @@ function update(dt){
   Game.groundY = groundY;
 
   if(!Game.gameOver){
-    // Управление
     if(dragTargetX!==null) cannon.update(dragTargetX);
     const isFiring = Game.pointer.down;
     if(Game.rageActive){ Game.rageTimer-=dt; if(Game.rageTimer<=0) Game.rageActive=false; }
@@ -837,7 +825,6 @@ function update(dt){
     const speedBonus=Math.min(0.5,cannon.upgradesCount*0.03);
 
     if(Game.mode==='classic'){
-      // Спавн обычных шаров (только если нет босса)
       if(!Game.boss){
         Game.spawnTimer+=frames;
         if(Game.spawnTimer>=Game.spawnInterval){
@@ -849,7 +836,6 @@ function update(dt){
           Game.balls.push(nb);
         }
       }
-      // Спавн финального босса
       if(!Game.boss && !Game.finalBossSpawned && Game.score>=2500){
         Game.boss = new Boss(Game.bossLevel, cannon.upgradesCount, FINAL_BOSS, true);
         Game.bossProjectiles=[]; Game.balls=[];
@@ -866,16 +852,13 @@ function update(dt){
         Game.bossTintColor=Game.boss.bossType.color; Game.bossTintAmount=0.2;
       }
     }
-    // В bossrush боссы спавнятся в bossRushNextBoss после победы
 
-    // Хитбокс пушки до земли
     const PAD=20;
     const cx = cannon.x - cannon.w/2 - PAD;
     const cy = cannon.y - cannon.h/2 - PAD;
     const cw = cannon.w + PAD*2;
     const ch = (groundY + 100) - cy;
 
-    // Шары
     for(let i=Game.balls.length-1;i>=0;i--){
       const b=Game.balls[i];
       b.update();
@@ -887,22 +870,21 @@ function update(dt){
         if(Math.hypot(bul.x-b.x, bul.y-b.y) < b.r+bul.r){
           let dmg = bul.damage;
           if(Game.rageActive) dmg=Math.floor(dmg*1.5);
-          if(bul.crit){ dmg=Math.floor(dmg*cannon.critMult); Game.critCount++; }
+          if(bul.crit) dmg=Math.floor(dmg*cannon.critMult);
           b.hp-=dmg;
           bul.hitIds.add(b);
           floatTexts.push(new FloatText(b.x, b.y-b.r-10, '-'+dmg, bul.crit?'#ff6464':'#fff', bul.crit));
           spawnHitSparks(bul.x, bul.y, bul.crit?'#ff6464':'#ffc832');
           Snd.hit();
           if(bul.knockback) b.vy = Math.max(0.3, b.vy-0.8);
-          if(bul.freeze>0 && Math.random()<bul.freeze){ b.slowTimer=Math.max(b.slowTimer,120); Game.freezeCount++; }
-          if(bul.poison>0){ b.poisonTimer=Math.max(b.poisonTimer,bul.poison); b.poisonDmg=Math.max(b.poisonDmg,1); Game.poisonCount++; }
+          if(bul.freeze>0 && Math.random()<bul.freeze) b.slowTimer=Math.max(b.slowTimer,120);
+          if(bul.poison>0){ b.poisonTimer=Math.max(b.poisonTimer,bul.poison); b.poisonDmg=Math.max(b.poisonDmg,1); }
           if(bul.explosive>0){
             for(const other of Game.balls){
               if(other===b) continue;
               if(Math.hypot(other.x-b.x, other.y-b.y)<bul.explosive) other.hp-=Math.max(1,Math.floor(dmg/2));
             }
             spawnExplosion(b.x, b.y, '#ff8c00', 8, 4);
-            Game.explosionCount++;
           }
           if(bul.pierce>0) bul.pierce--;
           else Game.bullets.splice(j,1);
@@ -910,7 +892,6 @@ function update(dt){
         }
       }
       if(died) continue;
-      // Дошёл до земли — проигрыш
       if(b.y + b.r >= groundY){
         if(cannon.shield>0){
           cannon.shield--; Snd.shield(); vibrate(30);
@@ -926,7 +907,6 @@ function update(dt){
         }
       }
     }
-    // Босс
     if(Game.boss){
       Game.boss.update(cannon.x, cannon.y, Game.bossProjectiles, dt);
       for(let j=Game.bullets.length-1;j>=0;j--){
@@ -935,7 +915,7 @@ function update(dt){
         if(Math.hypot(bul.x-Game.boss.x, bul.y-Game.boss.y) < Game.boss.r + bul.r){
           let dmg = bul.damage * cannon.dmgBossMult;
           if(Game.rageActive) dmg*=1.5;
-          if(bul.crit){ dmg*=cannon.critMult; Game.critCount++; }
+          if(bul.crit) dmg*=cannon.critMult;
           dmg=Math.floor(dmg);
           Game.boss.hp-=dmg; Game.boss.hitFlash=4;
           bul.hitIds.add(Game.boss);
@@ -955,13 +935,13 @@ function update(dt){
 
         if(Game.mode==='bossrush'){
           Game.score += 100 * Game.rushBossNumber;
-          if(Game.boss.isFinal){
+          const wasFinal = Game.boss.isFinal;
+          Game.boss = null; Game.bossProjectiles=[];
+          if(wasFinal){
             Game.victoryPending = true; Snd.victory();
           } else {
             Game.levelUpTrigger = true;
           }
-          Game.boss = null; Game.bossProjectiles=[];
-          // Спавним следующего босса после апгрейда
         } else {
           if(Game.boss.isFinal){
             Game.score += Math.floor(500 * cannon.luckyMult);
@@ -981,12 +961,10 @@ function update(dt){
           if(!wasFinal){ Game.levelUpTrigger = true; announce("ВОЛНА "+Game.bossLevel, "#ffc828", 1.5); }
         }
       }
-      // Снаряды босса
       for(let i=Game.bossProjectiles.length-1;i>=0;i--){
         const p=Game.bossProjectiles[i];
         p.update(dt);
         if(p.y<-40 || p.x<-40 || p.x>W+40){ Game.bossProjectiles.splice(i,1); continue; }
-        // Достиг земли — проигрыш
         if(p.y + p.r >= groundY){
           if(cannon.shield>0){
             cannon.shield--; Game.bossProjectiles.splice(i,1); vibrate(30); Snd.shield();
@@ -1001,7 +979,6 @@ function update(dt){
           }
         }
       }
-      // Босс дошёл до пушки
       if(Game.boss && Game.boss.y + Game.boss.r >= cannon.y - cannon.h/2){
         Game.gameOver=true; Snd.gameOver(); vibrate(300);
         if(Game.score>Game.highScore) Game.highScore=Game.score;
@@ -1023,7 +1000,7 @@ function update(dt){
     Game.levelUpTrigger = false;
     Game.upgradeChoices = pickUpgradeChoices();
     Game.state = 'upgrade'; Game.stateTime = 0;
-    // Если Boss Rush, после выбора улучшения спавним следующего босса
+    // ФИКС: в Boss Rush — ставим флаг, чтобы после выбора улучшения заспавнить следующего босса
     if(Game.mode==='bossrush' && !Game.boss){
       Game.pendingBossSpawn = true;
     }
@@ -1035,7 +1012,6 @@ function killBall(b,i,hpBonus,speedBonus){
   Game.totalKills++; Game.combo++;
   Game.comboTimer = 2.5;
   if(Game.combo > Game.maxCombo) Game.maxCombo = Game.combo;
-  if(Game.combo % 5 === 0) Snd.comboup();
   spawnExplosion(b.x, b.y, LEVELS[b.level].color, 12 + b.level*4, 5);
   Snd.explode(); shake(2 + b.level); vibrate(15);
   floatTexts.push(new FloatText(b.x, b.y-20, '+'+Math.floor(LEVELS[b.level].score*Game.cannon.luckyMult), '#ffdc64', false));
@@ -1144,27 +1120,22 @@ function drawMenu(){
 
   const bw=440, bh=65, gap=15;
   const cx=W/2, sy=H/2-190;
-  // Классика
   drawButton("КЛАССИКА", cx-bw/2, sy, bw, bh, '#2eb45a', '#3cd26e');
-  // Boss Rush
   drawButton("BOSS RUSH", cx-bw/2, sy+bh+gap, bw, bh, '#c81e1e', '#ff3c3c');
-  // Коллекция
   drawButton("КОЛЛЕКЦИЯ", cx-bw/2, sy+2*(bh+gap), bw, bh, '#5082dc', '#64a0f0');
-  // Достижения
   drawButton("ДОСТИЖЕНИЯ", cx-bw/2, sy+3*(bh+gap), bw, bh, '#c87e28', '#ffa03c');
-  // Магазин
   drawButton("МАГАЗИН", cx-bw/2, sy+4*(bh+gap), bw, bh, '#9648c8', '#c864ff');
-  // Выход
   drawButton("ВЫХОД", cx-bw/2, sy+5*(bh+gap), bw, bh, '#b43232', '#dc4646');
 
   drawRoundButton(W-90, 15, 75, 75, Game.muted ? "🔇" : "🔊", 'rgba(60,60,90,0.7)');
-  ctx.font=F.upgDesc; ctx.fillStyle='rgb(110,60,30)'; ctx.textAlign='center';
   if(Game.bossRushBest>0){
     ctx.fillStyle='#8c2814';
     ctx.font=F.upg;
+    ctx.textAlign='center';
     ctx.fillText("Boss Rush рекорд: босс #"+Game.bossRushBest, W/2, H-60);
   }
   ctx.font=F.upgDesc; ctx.fillStyle='rgb(110,60,30)';
+  ctx.textAlign='center';
   ctx.fillText("Веди пальцем — пушка едет. Держи — стреляет.", W/2, H-30);
 }
 function drawRoundButton(x,y,w,h,icon,bgColor){
@@ -1327,7 +1298,6 @@ function drawPlay(){
   cannon.draw(ctx);
   for(const ft of floatTexts) ft.draw(ctx);
 
-  // Верхняя панель
   ctx.fillStyle='white'; ctx.font=F.font;
   ctx.textAlign='left'; ctx.textBaseline='top';
   if(Game.mode==='bossrush'){
@@ -1357,7 +1327,6 @@ function drawPlay(){
     ctx.textAlign='left';
     ctx.fillText(`ФИНАЛ: ${Game.score}/2500`, bx+bw+8, by);
   }
-  // HP босса
   if(Game.boss){
     const bw=W-80, bh=26, bx=40, by = Game.mode==='bossrush' ? 120 : 130;
     ctx.fillStyle='rgb(60,20,30)'; ctx.fillRect(bx,by,bw,bh);
@@ -1421,8 +1390,13 @@ function drawPlay(){
     ctx.fillRect(0, H-110, W, 70);
     ctx.fillStyle='white'; ctx.font="bold 22px Arial";
     ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText("Веди пальцем по экрану — пушка едет.", W/2, H-82);
-    ctx.fillText("Держи палец — стреляет автоматически.", W/2, H-54);
+    if(Game.mode==='bossrush'){
+      ctx.fillText("УВОРАЧИВАЙСЯ! Босс стреляет — уезжай в сторону.", W/2, H-82);
+      ctx.fillText("Веди пальцем — пушка едет. Держи — стреляет.", W/2, H-54);
+    } else {
+      ctx.fillText("Веди пальцем по экрану — пушка едет.", W/2, H-82);
+      ctx.fillText("Держи палец — стреляет автоматически.", W/2, H-54);
+    }
     ctx.globalAlpha=1;
   }
   if(!Game.gameOver){
@@ -1531,15 +1505,6 @@ function drawVictory(){
   ctx.font=F.upg; ctx.fillStyle='#fff0c8';
   ctx.fillText("Тап — продолжить", W/2, H-80);
 }
-
-// Обработка "pendingBossSpawn" для bossrush после выбора улучшения
-const _origHandle = handlePointerDown;
-window._pendingCheck = setInterval(()=>{
-  if(Game.pendingBossSpawn && Game.state==='play' && !Game.boss && !Game.gameOver){
-    Game.pendingBossSpawn = false;
-    bossRushNextBoss();
-  }
-}, 100);
 
 let lastTime=performance.now();
 function loop(now){
