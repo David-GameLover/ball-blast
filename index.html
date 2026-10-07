@@ -37,6 +37,7 @@ const F = {
   announce:"bold 54px Arial", achv:"bold 22px Arial", bigMenu:"bold 36px Arial"
 };
 
+// ========== ЗВУК ==========
 const Snd = {
   ctx:null, master:null, enabled:true, muted:false,
   init(){ if(this.ctx) return; try{ this.ctx=new(window.AudioContext||window.webkitAudioContext)();
@@ -70,24 +71,39 @@ const Snd = {
   achv(){[523,659,784,1047,1319].forEach((f,i)=>setTimeout(()=>this.tone(f,0.12,'triangle',0.15),i*70));},
   rage(){this.tone(150,0.4,'sawtooth',0.16,60);},
   coin(){this.tone(1200,0.05,'sine',0.08,1800); setTimeout(()=>this.tone(1800,0.08,'sine',0.06),50);},
-  bossRushStart(){[392,523,659].forEach((f,i)=>setTimeout(()=>this.tone(f,0.2,'sawtooth',0.15),i*150));}
+  bossRushStart(){[392,523,659].forEach((f,i)=>setTimeout(()=>this.tone(f,0.2,'sawtooth',0.15),i*150));},
+  pickupFire(){this.tone(660,0.1,'sawtooth',0.14,1200); setTimeout(()=>this.tone(990,0.15,'sawtooth',0.12),80);},
+  pickupIce(){this.tone(1200,0.1,'sine',0.14,1800); setTimeout(()=>this.tone(900,0.15,'sine',0.12),80);},
+  pickupLight(){this.tone(800,0.08,'square',0.13,2000); setTimeout(()=>this.tone(1400,0.15,'square',0.1),60);}
 };
 function vibrate(ms){ if(navigator.vibrate) navigator.vibrate(ms); }
 
+// ========== УРОВНИ ШАРОВ ==========
 const LEVELS = [
   {r:60, hp:12, color:'#e74c3c', score:10, vyMin:0.5, vyMax:0.9},
   {r:42, hp:6,  color:'#f1c40f', score:6,  vyMin:0.8, vyMax:1.3},
   {r:26, hp:3,  color:'#2ecc71', score:3,  vyMin:1.2, vyMax:1.7},
   {r:15, hp:2,  color:'#3498db', score:1,  vyMin:1.5, vyMax:2.2}
 ];
+
+// ========== ТИПЫ БОССОВ (5 старых + 5 новых + финальный) ==========
 const BOSS_TYPES = [
-  {id:"toxic",    name:"ТОКСИЧНЫЙ",   color:'#64dc50', dark:'#286414', attack:"poison",   aura:'#64ff64'},
-  {id:"blackhole",name:"ЧЁРНАЯ ДЫРА", color:'#5a1496', dark:'#1e003c', attack:"dark",     aura:'#b450ff'},
-  {id:"ice",      name:"ЛЕДЯНОЙ",     color:'#96dcff', dark:'#3264a0', attack:"freeze",   aura:'#96dcff'},
-  {id:"fire",     name:"ОГНЕННЫЙ",    color:'#ff6432', dark:'#961e00', attack:"fire",     aura:'#ffc832'},
-  {id:"thunder",  name:"ГРОЗОВОЙ",    color:'#ffe632', dark:'#967800', attack:"lightning",aura:'#ffff96'}
+  // Старые 5
+  {id:"toxic",    name:"ТОКСИЧНЫЙ",   color:'#64dc50', dark:'#286414', attack:"poison",   aura:'#64ff64', desc:"Отравляет снарядами"},
+  {id:"blackhole",name:"ЧЁРНАЯ ДЫРА", color:'#5a1496', dark:'#1e003c', attack:"dark",     aura:'#b450ff', desc:"Тёмные сгустки"},
+  {id:"ice",      name:"ЛЕДЯНОЙ",     color:'#96dcff', dark:'#3264a0', attack:"freeze",   aura:'#96dcff', desc:"Замедляет игрока"},
+  {id:"fire",     name:"ОГНЕННЫЙ",    color:'#ff6432', dark:'#961e00', attack:"fire",     aura:'#ffc832', desc:"Огненные снаряды"},
+  {id:"thunder",  name:"ГРОЗОВОЙ",    color:'#ffe632', dark:'#967800', attack:"lightning",aura:'#ffff96', desc:"Быстрые молнии"},
+  // Новые 5
+  {id:"ghost",    name:"ПРИЗРАК",     color:'#c8c8ff', dark:'#5050a0', attack:"invisible",aura:'#ffffff', desc:"Становится невидимым"},
+  {id:"healer",   name:"ЦЕЛИТЕЛЬ",    color:'#96ff96', dark:'#288828', attack:"heal",     aura:'#b4ffb4', desc:"Восстанавливает HP"},
+  {id:"summoner", name:"ПРИЗЫВАТЕЛЬ", color:'#c89628', dark:'#604010', attack:"summon",   aura:'#ffc864', desc:"Призывает миньонов"},
+  {id:"void",     name:"ПУСТОТА",     color:'#3c0064', dark:'#000000', attack:"teleport", aura:'#c800ff', desc:"Телепортируется"},
+  {id:"titan",    name:"ТИТАН",       color:'#505096', dark:'#202040', attack:"spread",   aura:'#8080dc', desc:"Веер из 5 снарядов"}
 ];
-const FINAL_BOSS = {id:"final", name:"ФИНАЛЬНЫЙ", color:'#ffc832', dark:'#640064', attack:"final", aura:'#ff64ff'};
+const FINAL_BOSS = {id:"final", name:"ФИНАЛЬНЫЙ", color:'#ffc832', dark:'#640064', attack:"final", aura:'#ff64ff', desc:"Все атаки разом"};
+
+// ========== СКИНЫ (8 штук) ==========
 const SKINS = [
   {id:"default", name:"Классика", cost:0,   color:null,      glow:'#50a0ff'},
   {id:"red",     name:"Красная",  cost:10,  color:'#e74c3c', glow:'#ff3c3c'},
@@ -98,6 +114,15 @@ const SKINS = [
   {id:"pink",    name:"Розовая",  cost:50,  color:'#ff3c78', glow:'#ff64c8'},
   {id:"rainbow", name:"РАДУГА",   cost:100, color:'rainbow', glow:'#ffffff'}
 ];
+
+// ========== ТИПЫ ДРОПОВ (элементальные пули) ==========
+const DROP_TYPES = [
+  {id:"fire",  name:"ОГОНЬ",   color:'#ff6432', glow:'#ffc832', icon:"🔥", dur:15},
+  {id:"ice",   name:"ЛЁД",     color:'#64c8ff', glow:'#96ffff', icon:"❄️", dur:15},
+  {id:"light", name:"МОЛНИЯ",  color:'#ffe632', glow:'#ffff96', icon:"⚡", dur:15}
+];
+
+// ========== УЛУЧШЕНИЯ (33 штуки) ==========
 const UPGRADES = [
   {id:"damage",   name:"Урон +1",        desc:"+1 к урону",         color:'#e74c3c', tier:"common",   weight:10},
   {id:"rate",     name:"Скорострел",      desc:"Стрельба быстрее",   color:'#f1c40f', tier:"common",   weight:10},
@@ -134,6 +159,8 @@ const UPGRADES = [
   {id:"grand_nuke",name:"СУПЕР-ЯДЕРКА",   desc:"+10 урона",          color:'#ff32c8', tier:"legendary",weight:0.3}
 ];
 const TIER_RING = {common:'#b4b4b4', rare:'#50a0ff', epic:'#b450ff', legendary:'#ffc828'};
+
+// ========== ДОСТИЖЕНИЯ (17 штук) ==========
 const ACHIEVEMENTS = [
   {id:'kill1',   n:'ПЕРВАЯ КРОВЬ', desc:'Убей 1 шар',    r:1,  c:s=>s.totalKills>=1},
   {id:'kill100', n:'ОХОТНИК',      desc:'Убей 100 шаров',r:3,  c:s=>s.totalKills>=100},
@@ -152,8 +179,7 @@ const ACHIEVEMENTS = [
   {id:'rush5',   n:'РАЗМИНКА',     desc:'Boss Rush: босс 5', r:5, c:s=>s.bossRushBest>=5},
   {id:'rush10',  n:'ПОЛУФИНАЛ',    desc:'Boss Rush: босс 10',r:15,c:s=>s.bossRushBest>=10},
   {id:'rush20',  n:'БЕССМЕРТНЫЙ',  desc:'Boss Rush: босс 20',r:50,c:s=>s.bossRushBest>=20}
-];
-
+];// ========== ФОНЫ ==========
 function makeMenuBg() {
   const cv = document.createElement('canvas'); cv.width=W; cv.height=H;
   const c = cv.getContext('2d');
@@ -229,6 +255,7 @@ function drawBossFace(c,x,y,r,bt,hpText){
   if(hpText){ c.fillStyle='white'; c.font=F.font; c.textAlign='center'; c.textBaseline='middle';
     c.fillText(hpText,x,y+r/2+20); } }
 
+// ========== ЧАСТИЦЫ ==========
 const particles=[];
 const MAX_PARTICLES=200;
 class Particle{ constructor(x,y,vx,vy,color,life,size,gravity){
@@ -248,6 +275,7 @@ function spawnHitSparks(x,y,color){ if(particles.length>MAX_PARTICLES) return;
   for(let i=0;i<3;i++){ const a=Math.random()*Math.PI*2, sp=2+Math.random()*3;
     particles.push(new Particle(x,y,Math.cos(a)*sp,Math.sin(a)*sp,color,0.25,2,0.1)); } }
 
+// ========== ВСПЛЫВАЮЩИЙ ТЕКСТ ==========
 const floatTexts=[];
 class FloatText{ constructor(x,y,text,color,big){ this.x=x; this.y=y; this.text=text; this.color=color; this.life=0.9; this.big=!!big; }
   update(dt){ this.y-=1.5*dt*60; this.life-=dt; }
@@ -256,12 +284,14 @@ class FloatText{ constructor(x,y,text,color,big){ this.x=x; this.y=y; this.text=
     c.strokeStyle='black'; c.lineWidth=3; c.strokeText(this.text,this.x,this.y);
     c.fillText(this.text,this.x,this.y); c.globalAlpha=1; } }
 
+// ========== SHAKE / SLOWMO / ACHIEVEMENTS ==========
 let shakeAmount=0, slowmoFactor=1, slowmoTimer=0;
 function shake(a){ shakeAmount=Math.max(shakeAmount,a); }
 function startSlowmo(d,f){ slowmoTimer=d; slowmoFactor=f||0.25; }
 const achvPopups=[];
 function showAchievement(a){ achvPopups.push({a,life:3.5}); Snd.achv(); vibrate(50); }
 
+// ========== ИГРОВОЕ СОСТОЯНИЕ ==========
 const Game = {
   state:'splash', stateTime:0,
   pointer:{x:W/2,y:H/2,down:false,active:false},
@@ -269,6 +299,7 @@ const Game = {
   highScore:0, bossRushBest:0,
   mode:'classic',
   cannon:null, bullets:[], balls:[], boss:null, bossProjectiles:[],
+  drops:[], activeDrop:null, activeDropTimer:0, // элементальные пули
   bossLevel:1, bossThreshold:250, finalBossSpawned:false,
   score:0, spawnTimer:0, spawnInterval:140, gameOver:false,
   bigKillsCounter:0, bigKillsNeeded:1, levelUpTrigger:false,
@@ -281,7 +312,8 @@ const Game = {
   paused:false, muted:false, hintTimer:6,
   bossTintColor:null, bossTintAmount:0,
   rushBossNumber:0,
-  pendingBossSpawn:false
+  pendingBossSpawn:false,
+  bossMinions:[] // миньоны призывателя
 };
 let dragTargetX=null;
 
@@ -334,59 +366,10 @@ function checkAchievements(){
     }
   }
 }
-function startPlay(mode){
-  Game.mode = mode || 'classic';
-  Game.cannon = new Cannon();
-  Game.bullets=[]; Game.balls=[]; Game.boss=null; Game.bossProjectiles=[];
-  Game.bossLevel=1; Game.bossThreshold=250; Game.finalBossSpawned=false;
-  Game.score=0; Game.spawnTimer=0; Game.spawnInterval=140; Game.gameOver=false;
-  Game.bigKillsCounter=0; Game.bigKillsNeeded=1; Game.levelUpTrigger=false;
-  Game.toastText=''; Game.toastTimer=0; Game.victoryPending=false;
-  Game.groundY = Game.cannon.y + Game.cannon.h/2 - 5;
-  Game.combo=0; Game.comboTimer=0; Game.maxCombo=0; Game.totalKills=0;
-  Game.rageActive=false; Game.rageTimer=0; Game.paused=false;
-  Game.bossTintColor=null; Game.bossTintAmount=0; Game.hintTimer=6;
-  Game.rushBossNumber=0;
-  Game.pendingBossSpawn=false;
-  dragTargetX=null;
-  particles.length=0; floatTexts.length=0; achvPopups.length=0;
-  if(Game.mode==='bossrush'){
-    Game.cannon.baseCooldown = 5;
-    Game.cannon.damage = 3;
-    Game.cannon.multishot = 2;
-    Game.cannon.bulletSpeed = 14;
-    Game.cannon.bulletRadius = 7;
-    bossRushNextBoss();
-    Snd.bossRushStart();
-    announce("BOSS RUSH!", "#ff3c3c", 2.5);
-  } else {
-    announce("ВОЛНА 1", "#ffc828", 1.5);
-  }
-}
-function announce(text,color,dur){
-  Game.announceText=text; Game.announceColor=color||'#fff';
-  Game.announceTimer=dur||2;
-}
-function bossRushNextBoss(){
-  Game.rushBossNumber++;
-  Game.bossLevel = Game.rushBossNumber;
-  const lvl = Game.rushBossNumber;
-  const bossType = BOSS_TYPES[(lvl-1) % BOSS_TYPES.length];
-  const isFinal = lvl >= 25;
-  const b = new Boss(lvl, Game.cannon.upgradesCount, isFinal?FINAL_BOSS:bossType, isFinal);
-  b.hpMax = Math.floor(b.hpMax * (1 + lvl*0.02));
-  b.hp = b.hpMax;
-  b.shootInterval = Math.max(75, 170 - lvl*3);
-  b.shootTimer = b.shootInterval;
-  Game.boss = b;
-  Game.bossProjectiles = [];
-  Game.bossTintColor = b.bossType.color;
-  Game.bossTintAmount = 0.15;
-  announce("БОСС #" + lvl, b.bossType.aura, 1.5);
-}
 
+// ========== ШАР ==========
 class Ball{
-  constructor(level,x,y,vy,hpBonus,speedBonus){
+  constructor(level,x,y,vy,hpBonus,speedBonus,isMinion){
     this.level=level; this.x=x; this.y=y;
     this.r=LEVELS[level].r;
     this.hp=LEVELS[level].hp+Math.floor(Math.random()*(level+1))+(hpBonus||0);
@@ -395,6 +378,9 @@ class Ball{
       this.vy=(lo+Math.random()*(hi-lo))*(1+(speedBonus||0));
     } else this.vy=vy*(1+(speedBonus||0));
     this.slowTimer=0; this.poisonTimer=0; this.poisonDmg=0;
+    this.isMinion=!!isMinion;
+    // Шанс дропа звёздочки при смерти
+    this.dropChance = this.isMinion ? 0 : 0.08;
   }
   update(){
     if(this.poisonTimer>0){ this.poisonTimer--;
@@ -406,6 +392,7 @@ class Ball{
     let color=LEVELS[this.level].color;
     if(this.poisonTimer>0) color='rgb(100,200,60)';
     if(this.slowTimer>0) color='rgb(100,180,255)';
+    if(this.isMinion) color='rgb(200,120,60)';
     c.save(); c.shadowColor=color; c.shadowBlur=10;
     c.fillStyle=color; c.beginPath(); c.arc(this.x,this.y,this.r,0,Math.PI*2); c.fill(); c.restore();
     c.strokeStyle='white'; c.lineWidth=3;
@@ -414,10 +401,13 @@ class Ball{
     c.fillText(Math.max(0,this.hp),this.x,this.y);
   }
 }
+
+// ========== ПУЛЯ ==========
 class Bullet{
   constructor(x,y,vx,vy,opts){
     this.x=x; this.y=y; this.vx=vx; this.vy=vy;
     Object.assign(this,opts); this.hitIds=new Set();
+    this.element = opts.element || null; // fire / ice / light
   }
   update(balls,dt){
     if(this.homing>0 && balls && balls.length){
@@ -436,13 +426,62 @@ class Bullet{
       else if(this.x+this.r>W && this.vx>0){ this.vx=-this.vx; this.x=W-this.r; this.ricochet--; } }
   }
   draw(c){
-    const bodyColor = this.crit ? '#ff6464' : (Game.rageActive ? '#ff3c3c' : '#ffc832');
+    let bodyColor = this.crit ? '#ff6464' : (Game.rageActive ? '#ff3c3c' : '#ffc832');
+    // Цвет от элемента
+    if(this.element==='fire') bodyColor='#ff6432';
+    else if(this.element==='ice') bodyColor='#64c8ff';
+    else if(this.element==='light') bodyColor='#ffe632';
     const r=this.r;
-    c.save(); c.shadowColor=bodyColor; c.shadowBlur=8;
+    c.save(); c.shadowColor=bodyColor; c.shadowBlur=10;
     c.fillStyle=bodyColor; c.fillRect(this.x-r,this.y-r*1.6,r*2,r*3.2); c.restore();
     c.fillStyle='#5096ff'; c.beginPath(); c.arc(this.x,this.y-r*1.6,r,0,Math.PI*2); c.fill();
   }
 }
+
+// ========== ДРОП (звёздочка) ==========
+class Drop{
+  constructor(x,y,type){
+    this.x=x; this.y=y;
+    this.type=type; // "fire", "ice", "light"
+    this.r=18;
+    this.vy=1;
+    this.timer=0;
+    this.life=15; // исчезает через 15 сек
+  }
+  update(dt){
+    this.y += this.vy * dt * 60;
+    this.timer += dt;
+    this.life -= dt;
+  }
+  draw(c){
+    const t = DROP_TYPES.find(d=>d.id===this.type);
+    if(!t) return;
+    const pulse = Math.sin(this.timer*5) * 4;
+    c.save();
+    c.shadowColor = t.glow;
+    c.shadowBlur = 25 + pulse;
+    // Звезда
+    c.fillStyle = t.color;
+    c.beginPath();
+    for(let i=0;i<5;i++){
+      const a1 = (i*72 - 90) * Math.PI/180;
+      const a2 = (i*72 - 90 + 36) * Math.PI/180;
+      const r1 = this.r + pulse;
+      const r2 = this.r * 0.45;
+      if(i===0) c.moveTo(this.x+Math.cos(a1)*r1, this.y+Math.sin(a1)*r1);
+      else c.lineTo(this.x+Math.cos(a1)*r1, this.y+Math.sin(a1)*r1);
+      c.lineTo(this.x+Math.cos(a2)*r2, this.y+Math.sin(a2)*r2);
+    }
+    c.closePath();
+    c.fill();
+    c.strokeStyle = t.glow;
+    c.lineWidth = 2;
+    c.stroke();
+    c.restore();
+  }
+}
+
+// ========== СНАРЯД БОССА ==========
 class BossProjectile{
   constructor(x,y,vx,vy,kind,r){ this.x=x; this.y=y; this.vx=vx; this.vy=vy;
     this.kind=kind||"normal"; this.r=r||12; }
@@ -450,13 +489,18 @@ class BossProjectile{
   draw(c){
     const colors={normal:['#ff3c3c','#ffdc64'],poison:['#64dc50','#dcff78'],
       freeze:['#64c8ff','#dcf5ff'],dark:['#3c0064','#9632c8'],
-      fire:['#ff6432','#ffe664'],lightning:['#ffe632','#ffffc8']};
+      fire:['#ff6432','#ffe664'],lightning:['#ffe632','#ffffc8'],
+      ghost:['#c8c8ff','#ffffff'],heal:['#96ff96','#ffffff'],
+      summon:['#c89628','#ffc864'],void:['#3c0064','#c800ff'],
+      titan:['#505096','#8080dc']};
     const [c1,c2]=colors[this.kind]||colors.normal;
     c.save(); c.shadowColor=c1; c.shadowBlur=8;
     c.fillStyle=c1; c.beginPath(); c.arc(this.x,this.y,this.r,0,Math.PI*2); c.fill(); c.restore();
     c.fillStyle=c2; c.beginPath(); c.arc(this.x,this.y,Math.max(2,this.r-5),0,Math.PI*2); c.fill();
   }
 }
+
+// ========== БОСС (со всеми новыми типами) ==========
 class Boss{
   constructor(level,upgradesCount,bossType,isFinal){
     this.level=level; this.upgradesCount=upgradesCount||0; this.isFinal=!!isFinal;
@@ -476,12 +520,44 @@ class Boss{
     this.shootTimer=this.shootInterval;
     this.hitFlash=0; this.entered=false;
     this.phase=1;
+    // Спец-свойства для новых боссов
+    this.invisibleTimer=0; this.visible=true;
+    this.teleportTimer=0;
+    this.healTimer=0;
+    this.summonTimer=0;
   }
   update(cx,cy,projectiles,dt){
     if(this.phase===1 && this.hp < this.hpMax*0.5){
       this.phase=2;
       announce("ФАЗА 2!", this.bossType.aura, 1.2);
       shake(10);
+    }
+    // Спец-способности
+    if(this.attackKind==="invisible" && this.phase===2){
+      this.invisibleTimer+=dt;
+      if(this.invisibleTimer>2){ this.invisibleTimer=0; this.visible=!this.visible; }
+    } else this.visible=true;
+    if(this.attackKind==="teleport" && this.phase===2){
+      this.teleportTimer+=dt;
+      if(this.teleportTimer>3){ this.teleportTimer=0;
+        this.x=80+Math.random()*(W-160);
+        spawnExplosion(this.x,this.y,this.bossType.aura,10,4);
+      }
+    }
+    if(this.attackKind==="heal" && this.hp<this.hpMax){
+      this.healTimer+=dt;
+      if(this.healTimer>1){ this.healTimer=0; this.hp=Math.min(this.hpMax,this.hp+3); }
+    }
+    if(this.attackKind==="summon" && this.phase===2){
+      this.summonTimer+=dt;
+      if(this.summonTimer>3){
+        this.summonTimer=0;
+        // Спавним миньона
+        for(let i=0;i<2;i++){
+          const x = this.x + (Math.random()-0.5)*80;
+          Game.balls.push(new Ball(1, x, this.y+this.r, null, 0, 0, true));
+        }
+      }
     }
     this.x+=this.vx*dt*60;
     if(this.x-this.r<20){ this.x=20+this.r; this.vx=Math.abs(this.vx); }
@@ -520,6 +596,29 @@ class Boss{
         projectiles.push(new BossProjectile(ax,ay,Math.cos(ang)*baseSpeed*0.8,Math.sin(ang)*baseSpeed*0.8,"fire",9)); }
     } else if(k==="lightning"){
       projectiles.push(new BossProjectile(ax,ay,dx/dist*baseSpeed*1.3,dy/dist*baseSpeed*1.3,"lightning",8));
+    } else if(k==="invisible"){
+      if(this.visible){
+        for(const off of [-0.15,0.15]){
+          const ang=Math.atan2(dy,dx)+off;
+          projectiles.push(new BossProjectile(ax,ay,Math.cos(ang)*baseSpeed*1.1,Math.sin(ang)*baseSpeed*1.1,"ghost",10));
+        }
+      }
+    } else if(k==="heal"){
+      projectiles.push(new BossProjectile(ax,ay,dx/dist*baseSpeed*0.9,dy/dist*baseSpeed*0.9,"heal",12));
+    } else if(k==="summon"){
+      projectiles.push(new BossProjectile(ax,ay,dx/dist*baseSpeed*0.8,dy/dist*baseSpeed*0.8,"summon",14));
+    } else if(k==="teleport"){
+      const n = this.phase===2?3:2;
+      for(let i=0;i<n;i++){
+        const ang=Math.random()*Math.PI*2;
+        projectiles.push(new BossProjectile(ax,ay,Math.cos(ang)*baseSpeed,Math.sin(ang)*baseSpeed,"void",11));
+      }
+    } else if(k==="spread"){
+      // Титан — веер из 5 снарядов
+      for(const off of [-0.5,-0.25,0,0.25,0.5]){
+        const ang=Math.atan2(dy,dx)+off;
+        projectiles.push(new BossProjectile(ax,ay,Math.cos(ang)*baseSpeed*0.9,Math.sin(ang)*baseSpeed*0.9,"titan",9));
+      }
     } else if(k==="final"){
       const kinds=["poison","fire","lightning","freeze","dark"];
       const sh=kinds.slice().sort(()=>Math.random()-0.5);
@@ -536,6 +635,7 @@ class Boss{
     let c1=this.bossType.color;
     const c2=this.bossType.dark;
     if(this.hitFlash>0) c1='white';
+    if(!this.visible) c.globalAlpha=0.25;
     if(this.isFinal || this.phase===2){
       const t=performance.now()*0.003;
       for(let i=0;i<3;i++){ const rr=this.r+15+i*10;
@@ -546,8 +646,9 @@ class Boss{
         c.beginPath(); c.arc(this.x,this.y,rr,0,Math.PI*2); c.stroke(); }
     }
     drawBossFace(c,this.x,this.y,this.r,{color:c1,dark:c2},Math.max(0,this.hp).toString());
+    c.globalAlpha=1;
   }
-}
+}// ========== ПУШКА ==========
 class Cannon{
   constructor(){
     this.w=110; this.h=110;
@@ -616,6 +717,7 @@ class Cannon{
     Snd.shoot(); shake(1.5);
     const bullets=[]; const n=this.multishot;
     const startY=this.y-this.h/2-10;
+    const elem = Game.activeDrop;
     for(let i=0;i<n;i++){
       const angle = n===1 ? 0 : -this.spread + (2*this.spread)*(i/(n-1));
       const vx=Math.sin(angle)*this.bulletSpeed;
@@ -624,7 +726,8 @@ class Cannon{
         r:this.bulletRadius, damage:this.damage, pierce:this.pierce,
         crit:Math.random()<this.critChance, explosive:this.explosiveRadius,
         homing:this.homing, ricochet:this.ricochet, knockback:this.knockback,
-        freeze:this.freezeChance, poison:this.poisonTimer
+        freeze:this.freezeChance, poison:this.poisonTimer,
+        element: elem
       }));
     }
     return bullets;
@@ -663,8 +766,8 @@ class Cannon{
   }
 }
 
+// ========== INPUT ==========
 const BTN = { pause:{x:W-90,y:15,w:75,h:75} };
-
 function getPos(cx,cy){ const r=canvas.getBoundingClientRect();
   return {x:(cx-r.left)*(W/r.width), y:(cy-r.top)*(H/r.height)}; }
 
@@ -731,7 +834,10 @@ function handlePointerDown(x,y){
     return false;
   }
   if(Game.state==='victory'){
-    if(Game.stateTime>1500){ Game.victoryPending=false; Game.state='play'; Game.stateTime=0; }
+    if(Game.stateTime>1500){
+      Game.victoryPending=false; Game.state='play'; Game.stateTime=0;
+      if(Game.mode==='bossrush'){ bossRushNextBoss(); }
+    }
     return true;
   }
   if(Game.state==='play'&&Game.paused){
@@ -777,6 +883,60 @@ canvas.addEventListener('touchmove', e=>{
 canvas.addEventListener('touchend', e=>{ e.preventDefault(); Game.pointer.down=false; dragTargetX=null; }, {passive:false});
 canvas.addEventListener('touchcancel', ()=>{ Game.pointer.down=false; dragTargetX=null; });
 
+// ========== СТАРТ ИГРЫ ==========
+function startPlay(mode){
+  Game.mode = mode || 'classic';
+  Game.cannon = new Cannon();
+  Game.bullets=[]; Game.balls=[]; Game.boss=null; Game.bossProjectiles=[];
+  Game.drops=[]; Game.activeDrop=null; Game.activeDropTimer=0;
+  Game.bossLevel=1; Game.bossThreshold=250; Game.finalBossSpawned=false;
+  Game.score=0; Game.spawnTimer=0; Game.spawnInterval=140; Game.gameOver=false;
+  Game.bigKillsCounter=0; Game.bigKillsNeeded=1; Game.levelUpTrigger=false;
+  Game.toastText=''; Game.toastTimer=0; Game.victoryPending=false;
+  Game.groundY = Game.cannon.y + Game.cannon.h/2 - 5;
+  Game.combo=0; Game.comboTimer=0; Game.maxCombo=0; Game.totalKills=0;
+  Game.rageActive=false; Game.rageTimer=0; Game.paused=false;
+  Game.bossTintColor=null; Game.bossTintAmount=0; Game.hintTimer=6;
+  Game.rushBossNumber=0;
+  Game.pendingBossSpawn=false;
+  dragTargetX=null;
+  particles.length=0; floatTexts.length=0; achvPopups.length=0;
+  if(Game.mode==='bossrush'){
+    Game.cannon.baseCooldown = 5;
+    Game.cannon.damage = 3;
+    Game.cannon.multishot = 2;
+    Game.cannon.bulletSpeed = 14;
+    Game.cannon.bulletRadius = 7;
+    bossRushNextBoss();
+    Snd.bossRushStart();
+    announce("BOSS RUSH!", "#ff3c3c", 2.5);
+  } else {
+    announce("ВОЛНА 1", "#ffc828", 1.5);
+  }
+}
+function announce(text,color,dur){
+  Game.announceText=text; Game.announceColor=color||'#fff';
+  Game.announceTimer=dur||2;
+}
+function bossRushNextBoss(){
+  Game.rushBossNumber++;
+  Game.bossLevel = Game.rushBossNumber;
+  const lvl = Game.rushBossNumber;
+  const bossType = BOSS_TYPES[(lvl-1) % BOSS_TYPES.length];
+  const isFinal = lvl === 25;
+  const b = new Boss(lvl, Game.cannon.upgradesCount, isFinal?FINAL_BOSS:bossType, isFinal);
+  b.hpMax = Math.floor(b.hpMax * (1 + lvl*0.02));
+  b.hp = b.hpMax;
+  b.shootInterval = Math.max(75, 170 - lvl*3);
+  b.shootTimer = b.shootInterval;
+  Game.boss = b;
+  Game.bossProjectiles = [];
+  Game.bossTintColor = b.bossType.color;
+  Game.bossTintAmount = 0.15;
+  announce("БОСС #" + lvl, b.bossType.aura, 1.5);
+}
+
+// ========== UPDATE ==========
 function update(dt){
   if(slowmoTimer>0){ slowmoTimer-=dt; dt*=slowmoFactor; }
   Game.stateTime+=dt*1000;
@@ -795,8 +955,11 @@ function update(dt){
   if(Game.comboTimer>0){ Game.comboTimer-=dt; if(Game.comboTimer<=0) Game.combo=0; }
   if(Game.bossTintAmount>0 && !Game.boss) Game.bossTintAmount=Math.max(0,Game.bossTintAmount-dt*0.5);
   if(Game.hintTimer>0) Game.hintTimer-=dt;
+  if(Game.activeDropTimer>0){
+    Game.activeDropTimer-=dt;
+    if(Game.activeDropTimer<=0) Game.activeDrop=null;
+  }
 
-  // ФИКС: спавн следующего босса в Boss Rush после выбора улучшения
   if(Game.pendingBossSpawn && Game.state==='play' && !Game.boss && !Game.gameOver){
     Game.pendingBossSpawn=false;
     bossRushNextBoss();
@@ -820,6 +983,28 @@ function update(dt){
     if(isFiring) Game.bullets.push(...cannon.shoot());
     for(const b of Game.bullets) b.update(Game.balls, dt);
     Game.bullets = Game.bullets.filter(b=>b.y>-40 && b.x>-40 && b.x<W+40);
+
+    // Дропы
+    for(let i=Game.drops.length-1;i>=0;i--){
+      const d=Game.drops[i];
+      d.update(dt);
+      if(d.life<=0 || d.y > groundY+30){
+        Game.drops.splice(i,1); continue;
+      }
+      // Подбор
+      if(Math.abs(d.x-cannon.x)<cannon.w/2 && Math.abs(d.y-cannon.y)<cannon.h/2+30){
+        Game.activeDrop = d.type;
+        Game.activeDropTimer = 15;
+        if(d.type==='fire') Snd.pickupFire();
+        else if(d.type==='ice') Snd.pickupIce();
+        else Snd.pickupLight();
+        const t = DROP_TYPES.find(x=>x.id===d.type);
+        announce(t.name + " ПУЛИ!", t.color, 1.2);
+        spawnExplosion(d.x,d.y,t.color,15,5);
+        vibrate(40);
+        Game.drops.splice(i,1);
+      }
+    }
 
     const hpBonus=Math.floor(cannon.upgradesCount/2);
     const speedBonus=Math.min(0.5,cannon.upgradesCount*0.03);
@@ -853,12 +1038,7 @@ function update(dt){
       }
     }
 
-    const PAD=20;
-    const cx = cannon.x - cannon.w/2 - PAD;
-    const cy = cannon.y - cannon.h/2 - PAD;
-    const cw = cannon.w + PAD*2;
-    const ch = (groundY + 100) - cy;
-
+    // ШАРЫ
     for(let i=Game.balls.length-1;i>=0;i--){
       const b=Game.balls[i];
       b.update();
@@ -879,6 +1059,19 @@ function update(dt){
           if(bul.knockback) b.vy = Math.max(0.3, b.vy-0.8);
           if(bul.freeze>0 && Math.random()<bul.freeze) b.slowTimer=Math.max(b.slowTimer,120);
           if(bul.poison>0){ b.poisonTimer=Math.max(b.poisonTimer,bul.poison); b.poisonDmg=Math.max(b.poisonDmg,1); }
+          // Элементальные эффекты
+          if(bul.element==='fire'){ b.poisonTimer=Math.max(b.poisonTimer,60); b.poisonDmg=Math.max(b.poisonDmg,1); }
+          else if(bul.element==='ice'){ b.slowTimer=Math.max(b.slowTimer,90); }
+          else if(bul.element==='light'){
+            // Молния — бьёт соседние шары
+            for(const other of Game.balls){
+              if(other===b) continue;
+              if(Math.hypot(other.x-b.x, other.y-b.y)<80){
+                other.hp -= Math.max(1, Math.floor(dmg/2));
+                spawnHitSparks(other.x, other.y, '#ffe632');
+              }
+            }
+          }
           if(bul.explosive>0){
             for(const other of Game.balls){
               if(other===b) continue;
@@ -907,6 +1100,7 @@ function update(dt){
         }
       }
     }
+    // БОСС
     if(Game.boss){
       Game.boss.update(cannon.x, cannon.y, Game.bossProjectiles, dt);
       for(let j=Game.bullets.length-1;j>=0;j--){
@@ -1000,7 +1194,6 @@ function update(dt){
     Game.levelUpTrigger = false;
     Game.upgradeChoices = pickUpgradeChoices();
     Game.state = 'upgrade'; Game.stateTime = 0;
-    // ФИКС: в Boss Rush — ставим флаг, чтобы после выбора улучшения заспавнить следующего босса
     if(Game.mode==='bossrush' && !Game.boss){
       Game.pendingBossSpawn = true;
     }
@@ -1012,11 +1205,16 @@ function killBall(b,i,hpBonus,speedBonus){
   Game.totalKills++; Game.combo++;
   Game.comboTimer = 2.5;
   if(Game.combo > Game.maxCombo) Game.maxCombo = Game.combo;
-  spawnExplosion(b.x, b.y, LEVELS[b.level].color, 12 + b.level*4, 5);
+  spawnExplosion(b.x, b.y, b.isMinion?'#c89628':LEVELS[b.level].color, 12 + b.level*4, 5);
   Snd.explode(); shake(2 + b.level); vibrate(15);
   floatTexts.push(new FloatText(b.x, b.y-20, '+'+Math.floor(LEVELS[b.level].score*Game.cannon.luckyMult), '#ffdc64', false));
+  // Дроп звёздочки
+  if(b.dropChance && Math.random() < b.dropChance){
+    const t = DROP_TYPES[Math.floor(Math.random()*DROP_TYPES.length)];
+    Game.drops.push(new Drop(b.x, b.y, t.id));
+  }
   const wasBig = b.level === 0;
-  if(b.level + 1 < LEVELS.length){
+  if(!b.isMinion && b.level + 1 < LEVELS.length){
     for(let k=0;k<2;k++){
       const child=new Ball(b.level+1, b.x+(Math.random()-0.5)*b.r*2, b.y+(Math.random()-0.5)*20, null, hpBonus, speedBonus);
       child.vy *= Game.cannon.slowMult;
@@ -1031,8 +1229,71 @@ function killBall(b,i,hpBonus,speedBonus){
       Game.levelUpTrigger = true;
     }
   }
+}// ========== ВЫБОР КАРТИНКИ ИЗ ГАЛЕРЕИ + ЗАМОРОЗКА ==========
+const filePicker = document.createElement('input');
+filePicker.type = 'file';
+filePicker.accept = 'image/*';
+filePicker.style.display = 'none';
+document.body.appendChild(filePicker);
+
+filePicker.addEventListener('change', e=>{
+  const file=e.target.files[0];
+  if(!file){ return; }
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    const img=new Image();
+    img.onload=()=>{
+      if(!Game.cannon) return;
+      const tmp=document.createElement('canvas');
+      tmp.width=110; tmp.height=110;
+      const tc=tmp.getContext('2d');
+      const ratio=Math.min(110/img.width,110/img.height);
+      const nw=img.width*ratio, nh=img.height*ratio;
+      tc.drawImage(img,(110-nw)/2,(110-nh)/2,nw,nh);
+      // Автоудаление фона (заливка от 4 углов)
+      try {
+        const id=tc.getImageData(0,0,110,110); const d=id.data;
+        const getPx=(x,y)=>{ const i=(y*110+x)*4; return [d[i],d[i+1],d[i+2]]; };
+        const corners=[getPx(0,0),getPx(109,0),getPx(0,109),getPx(109,109)];
+        const tol=60;
+        const match=(r,g,b)=>corners.some(([cr,cg,cb])=>Math.abs(r-cr)<=tol && Math.abs(g-cg)<=tol && Math.abs(b-cb)<=tol);
+        const visited=new Uint8Array(110*110);
+        const queue=[[0,0],[109,0],[0,109],[109,109]];
+        for(const [x,y] of queue) visited[y*110+x]=1;
+        while(queue.length){
+          const [x,y]=queue.shift(); const i=(y*110+x)*4;
+          if(!match(d[i],d[i+1],d[i+2])) continue;
+          d[i+3]=0;
+          for(const [dx,dy] of [[-1,0],[1,0],[0,-1],[0,1]]){
+            const nx=x+dx, ny=y+dy;
+            if(nx<0||ny<0||nx>=110||ny>=110) continue;
+            const ni=ny*110+nx;
+            if(!visited[ni]){ visited[ni]=1; queue.push([nx,ny]); }
+          }
+        }
+        tc.putImageData(id,0,0);
+      } catch(err){}
+      const out=new Image();
+      out.onload=()=>{
+        Game.cannon.image=out;
+        Game.toastText="Картинка загружена!"; Game.toastTimer=120;
+      };
+      out.src=tmp.toDataURL();
+    };
+    img.src=ev.target.result;
+  };
+  reader.readAsDataURL(file);
+});
+
+// Функция: пауза + открытие галереи
+function openImagePicker(){
+  if(!Game.cannon) return;
+  Game.paused = true; // ЗАМОРАЖИВАЕМ ИГРУ
+  filePicker.value = ''; // сброс, чтобы можно было выбрать ту же картинку
+  filePicker.click();
 }
 
+// ========== DRAW ==========
 function draw(){
   ctx.clearRect(0,0,W,H);
   const inGame = (Game.state==='play'||Game.state==='upgrade'||Game.state==='victory');
@@ -1065,6 +1326,7 @@ function draw(){
   vg.addColorStop(0,'rgba(0,0,0,0)'); vg.addColorStop(1,'rgba(0,0,0,0.4)');
   ctx.fillStyle=vg; ctx.fillRect(0,0,W,H);
 }
+
 function drawAchvPopups(){
   for(let i=0;i<achvPopups.length;i++){
     const p=achvPopups[i];
@@ -1090,6 +1352,7 @@ function drawAchvPopups(){
     ctx.globalAlpha=1;
   }
 }
+
 function drawSplash(){
   const t=Math.min(1,Game.stateTime/700);
   const ease=1-Math.pow(1-t,3);
@@ -1105,6 +1368,7 @@ function drawSplash(){
   ctx.fillText("коснись экрана...", W/2, H-100);
   ctx.globalAlpha=1;
 }
+
 function drawMenu(){
   const t=Game.stateTime*0.001*5;
   const pulse=Math.sin(t)*7;
@@ -1138,6 +1402,7 @@ function drawMenu(){
   ctx.textAlign='center';
   ctx.fillText("Веди пальцем — пушка едет. Держи — стреляет.", W/2, H-30);
 }
+
 function drawRoundButton(x,y,w,h,icon,bgColor){
   ctx.save();
   ctx.fillStyle=bgColor||'rgba(0,0,0,0.5)';
@@ -1153,6 +1418,7 @@ function drawRoundButton(x,y,w,h,icon,bgColor){
   ctx.fillText(icon, x+w/2, y+h/2+4);
   ctx.restore();
 }
+
 function drawButton(text,x,y,w,h,baseColor,hoverColor){
   const isHover = Game.pointer.active && Game.pointer.x>=x && Game.pointer.x<=x+w && Game.pointer.y>=y && Game.pointer.y<=y+h;
   ctx.save();
@@ -1166,6 +1432,7 @@ function drawButton(text,x,y,w,h,baseColor,hoverColor){
   ctx.textAlign='center'; ctx.textBaseline='middle';
   ctx.fillText(text, x+w/2, y+h/2);
 }
+
 function drawCollection(){
   const all = BOSS_TYPES.concat([FINAL_BOSS]);
   ctx.font=F.big; ctx.textAlign='center'; ctx.textBaseline='middle';
@@ -1174,19 +1441,20 @@ function drawCollection(){
   const def = all.filter(b=>(Game.collection[b.id]||0)>0).length;
   ctx.font=F.upg; ctx.fillStyle='#fff0c8';
   ctx.fillText(`Побеждено: ${def} / ${all.length}`, W/2, 145);
-  const cw=300, ch=180, gx=30, gy=20, cols=2;
+  const cw=300, ch=140, gx=30, gy=18, cols=2;
   const tw=cols*cw+(cols-1)*gx;
   const sx=(W-tw)/2, sy=175;
   for(let i=0;i<all.length;i++){
     const bt=all[i];
     const row=Math.floor(i/cols), col=i%cols;
     const x=sx+col*(cw+gx), y=sy+row*(ch+gy);
+    if(y>H-40) break;
     const isDef = (Game.collection[bt.id]||0)>0;
     ctx.save(); if(isDef){ ctx.shadowColor=bt.color; ctx.shadowBlur=15; }
     ctx.fillStyle='#232a3c'; ctx.fillRect(x,y,cw,ch); ctx.restore();
     ctx.strokeStyle = isDef ? bt.color : '#505050'; ctx.lineWidth=4;
     ctx.strokeRect(x,y,cw,ch);
-    const fx=x+65, fy=y+ch/2, fr=40;
+    const fx=x+55, fy=y+ch/2, fr=35;
     if(isDef) drawBossFace(ctx, fx, fy, fr, bt);
     else {
       ctx.fillStyle='#3c3c46'; ctx.beginPath(); ctx.arc(fx,fy,fr,0,Math.PI*2); ctx.fill();
@@ -1199,20 +1467,23 @@ function drawCollection(){
     ctx.textAlign='left'; ctx.textBaseline='top';
     if(isDef){
       ctx.fillStyle='white'; ctx.font=F.col;
-      ctx.fillText(bt.name, x+120, y+40);
+      ctx.fillText(bt.name, x+105, y+25);
+      ctx.fillStyle='#c8c8c8'; ctx.font=F.upgDesc;
+      ctx.fillText(bt.desc, x+105, y+52);
       ctx.fillStyle='#ffdc64'; ctx.font=F.upgDesc;
-      ctx.fillText(`Побеждён: ${Game.collection[bt.id]||0} раз`, x+120, y+80);
+      ctx.fillText(`×${Game.collection[bt.id]||0}`, x+105, y+75);
     } else {
       ctx.fillStyle='#9696a0'; ctx.font=F.col;
-      ctx.fillText("???", x+120, y+40);
+      ctx.fillText("???", x+105, y+25);
       ctx.fillStyle='#787882'; ctx.font=F.upgDesc;
-      ctx.fillText("Ещё не побеждён", x+120, y+80);
+      ctx.fillText("Не побеждён", x+105, y+52);
     }
   }
   ctx.fillStyle='#fff0c8'; ctx.font=F.upgDesc;
   ctx.textAlign='center'; ctx.textBaseline='middle';
   ctx.fillText("Тап в левом верхнем углу — назад", W/2, H-30);
 }
+
 function drawAchievements(){
   ctx.font=F.big; ctx.textAlign='center'; ctx.textBaseline='middle';
   ctx.fillStyle='#8c2814'; ctx.fillText("ДОСТИЖЕНИЯ", W/2+5, 95);
@@ -1244,6 +1515,7 @@ function drawAchievements(){
   ctx.textAlign='center'; ctx.textBaseline='middle';
   ctx.fillText("Тап в левом верхнем углу — назад", W/2, H-20);
 }
+
 function drawShop(){
   ctx.font=F.big; ctx.textAlign='center'; ctx.textBaseline='middle';
   ctx.fillStyle='#8c2814'; ctx.fillText("МАГАЗИН", W/2+5, 95);
@@ -1281,6 +1553,7 @@ function drawShop(){
   ctx.textAlign='center'; ctx.textBaseline='middle';
   ctx.fillText("Тап по скину — выбрать/купить | Тап в углу — назад", W/2, H-30);
 }
+
 function drawPlay(){
   const cannon=Game.cannon;
   if(!cannon) return;
@@ -1292,12 +1565,14 @@ function drawPlay(){
 
   for(const p of particles) p.draw(ctx);
   for(const b of Game.balls) b.draw(ctx);
+  for(const d of Game.drops) d.draw(ctx);
   for(const p of Game.bossProjectiles) p.draw(ctx);
   for(const b of Game.bullets) b.draw(ctx);
   if(Game.boss) Game.boss.draw(ctx);
   cannon.draw(ctx);
   for(const ft of floatTexts) ft.draw(ctx);
 
+  // Верхняя панель
   ctx.fillStyle='white'; ctx.font=F.font;
   ctx.textAlign='left'; ctx.textBaseline='top';
   if(Game.mode==='bossrush'){
@@ -1306,7 +1581,7 @@ function drawPlay(){
     ctx.fillText("БОСС #" + Math.max(1,Game.rushBossNumber), 20, 20);
     ctx.font=F.upgDesc; ctx.fillStyle='rgb(200,200,120)';
     ctx.fillText(`Рекорд: босс #${Game.bossRushBest}`, 20, 70);
-    ctx.fillText(`Урон ${cannon.damage} • Пули ${cannon.multishot} • Пробой ${cannon.pierce} • Щит ${cannon.shield}`, 20, 95);
+    ctx.fillText(`Урон ${cannon.damage} • Пули ${cannon.multishot}`, 20, 95);
   } else {
     ctx.fillText(`Очки: ${Game.score}`, 20, 20);
     ctx.font=F.upgDesc; ctx.fillStyle='rgb(200,200,120)';
@@ -1315,11 +1590,28 @@ function drawPlay(){
     ctx.fillText(`Прокачек: ${cannon.upgradesCount} • До улучшения: ${Game.bigKillsCounter}/${Game.bigKillsNeeded}`, 20, 75);
   }
 
+  // Активный дроп-бафф
+  if(Game.activeDrop && Game.activeDropTimer>0){
+    const dt = DROP_TYPES.find(x=>x.id===Game.activeDrop);
+    if(dt){
+      ctx.save();
+      ctx.shadowColor = dt.glow; ctx.shadowBlur = 20;
+      ctx.fillStyle = dt.color;
+      ctx.font = "bold 26px Arial";
+      ctx.textAlign = 'left';
+      ctx.fillText(dt.icon + " " + dt.name + " " + Math.ceil(Game.activeDropTimer) + "с", 20, 115);
+      ctx.restore();
+    }
+  }
+
+  // Кнопка паузы
   drawRoundButton(BTN.pause.x, BTN.pause.y, BTN.pause.w, BTN.pause.h, "⏸", 'rgba(60,60,90,0.85)');
+  // Кнопка картинки
+  drawRoundButton(W-90, 100, 75, 75, "📷", 'rgba(60,90,60,0.85)');
 
   if(Game.mode==='classic' && !Game.finalBossSpawned){
     const prog=Math.min(1, Game.score/2500);
-    const bw=250, bh=14, bx=20, by=100;
+    const bw=250, bh=14, bx=20, by=140;
     ctx.fillStyle='rgb(40,20,60)'; ctx.fillRect(bx,by,bw,bh);
     ctx.fillStyle='rgb(255,200,50)'; ctx.fillRect(bx,by,bw*prog,bh);
     ctx.strokeStyle='white'; ctx.lineWidth=2; ctx.strokeRect(bx,by,bw,bh);
@@ -1328,7 +1620,7 @@ function drawPlay(){
     ctx.fillText(`ФИНАЛ: ${Game.score}/2500`, bx+bw+8, by);
   }
   if(Game.boss){
-    const bw=W-80, bh=26, bx=40, by = Game.mode==='bossrush' ? 120 : 130;
+    const bw=W-80, bh=26, bx=40, by = Game.mode==='bossrush' ? 120 : 160;
     ctx.fillStyle='rgb(60,20,30)'; ctx.fillRect(bx,by,bw,bh);
     const ratio=Math.max(0, Game.boss.hp/Game.boss.hpMax);
     ctx.save();
@@ -1347,7 +1639,7 @@ function drawPlay(){
     ctx.fillStyle='#ff3c3c'; ctx.font="bold 26px Arial";
     ctx.textAlign='center'; ctx.textBaseline='top';
     ctx.save(); ctx.shadowColor='#ff3c3c'; ctx.shadowBlur=20;
-    ctx.fillText("🔥 ЯРОСТЬ x1.5 " + Math.ceil(Game.rageTimer) + "с", W/2, 175);
+    ctx.fillText("🔥 ЯРОСТЬ x1.5 " + Math.ceil(Game.rageTimer) + "с", W/2, 200);
     ctx.restore();
   }
   if(Game.combo>1 && Game.mode==='classic'){
@@ -1357,7 +1649,7 @@ function drawPlay(){
     const cc = Game.combo>=20?'#ff3c78':Game.combo>=10?'#ff8c00':'#ffc832';
     ctx.fillStyle=cc;
     ctx.save(); ctx.shadowColor=cc; ctx.shadowBlur=20;
-    ctx.fillText(`x${Game.combo}`, W-100, 200);
+    ctx.fillText(`x${Game.combo}`, W-100, 220);
     ctx.restore(); ctx.globalAlpha=1;
   }
   if(Game.announceTimer>0){
@@ -1392,17 +1684,17 @@ function drawPlay(){
     ctx.textAlign='center'; ctx.textBaseline='middle';
     if(Game.mode==='bossrush'){
       ctx.fillText("УВОРАЧИВАЙСЯ! Босс стреляет — уезжай в сторону.", W/2, H-82);
-      ctx.fillText("Веди пальцем — пушка едет. Держи — стреляет.", W/2, H-54);
+      ctx.fillText("📷 — картинка • ⏸ — пауза", W/2, H-54);
     } else {
-      ctx.fillText("Веди пальцем по экрану — пушка едет.", W/2, H-82);
-      ctx.fillText("Держи палец — стреляет автоматически.", W/2, H-54);
+      ctx.fillText("Веди пальцем — пушка едет. Лови звёздочки ⭐", W/2, H-82);
+      ctx.fillText("📷 — своя картинка • ⏸ — пауза", W/2, H-54);
     }
     ctx.globalAlpha=1;
   }
   if(!Game.gameOver){
     ctx.fillStyle='rgb(240,240,240)'; ctx.font=F.hint;
     ctx.textAlign='left'; ctx.textBaseline='top';
-    ctx.fillText("Палец ведёт пушку. Держи — стреляет. ⏸ — пауза.", 20, H-30);
+    ctx.fillText("Палец — пушка. Держи — стреляет. 📷 — картинка. ⏸ — пауза.", 20, H-30);
   } else {
     ctx.fillStyle='rgba(0,0,0,0.75)'; ctx.fillRect(0,0,W,H);
     ctx.fillStyle='rgb(231,76,60)'; ctx.font=F.big;
@@ -1427,6 +1719,7 @@ function drawPlay(){
     drawButton("ЗАНОВО", W/2-150, H/2+150, 300, 60, '#2eb45a', '#3cd26e');
   }
 }
+
 function drawPause(){
   ctx.fillStyle='rgba(0,0,0,0.8)'; ctx.fillRect(0,0,W,H);
   ctx.fillStyle='white'; ctx.font=F.big;
@@ -1445,6 +1738,7 @@ function drawPause(){
     ctx.fillText(`Прокачек: ${Game.cannon.upgradesCount}`, W/2, H/2+210);
   }
 }
+
 function drawUpgrade(){
   ctx.fillStyle='rgba(0,0,0,0.85)'; ctx.fillRect(0,0,W,H);
   const cw=560, ch=100, gap=15;
@@ -1481,6 +1775,7 @@ function drawUpgrade(){
     ctx.fillText(up.tier.toUpperCase(), rx+cw-15, cy+10);
   }
 }
+
 function drawVictory(){
   const el=Game.stateTime;
   const pulse=Math.sin(el*0.005)*10;
@@ -1498,14 +1793,36 @@ function drawVictory(){
   ctx.font=F.font; ctx.fillStyle='white';
   if(Game.mode==='bossrush'){
     ctx.fillText(`Пройдено боссов: ${Game.rushBossNumber}`, W/2, H/2+160);
+    ctx.fillStyle='#ffdc64'; ctx.font=F.upg;
+    ctx.fillText(`Рекорд: босс #${Game.bossRushBest}`, W/2, H/2+210);
+    ctx.fillStyle='white';
   } else {
     ctx.fillText(`Очки: ${Game.score}`, W/2, H/2+160);
     ctx.fillText(`Комбо: x${Game.maxCombo} • Убито: ${Game.totalKills}`, W/2, H/2+200);
   }
   ctx.font=F.upg; ctx.fillStyle='#fff0c8';
-  ctx.fillText("Тап — продолжить", W/2, H-80);
+  ctx.fillText(Game.mode==='bossrush' ? "Тап — бесконечный режим!" : "Тап — продолжить", W/2, H-80);
 }
 
+// ========== FIX: обработчик кнопки 📷 через отдельный listener ==========
+canvas.addEventListener('touchend', e=>{
+  // уже есть выше, ничего дополнительного
+}, {passive:true});
+
+// Обновляем handlePointerDown — добавим кнопку cam
+const _origHandlePointerDown = handlePointerDown;
+handlePointerDown = function(x,y){
+  const inBtn=(bx,by,bw,bh)=>x>=bx&&x<=bx+bw&&y>=by&&y<=by+bh;
+  if(Game.state==='play' && !Game.gameOver && !Game.paused){
+    if(inBtn(W-90, 100, 75, 75)){ // 📷
+      openImagePicker();
+      return true;
+    }
+  }
+  return _origHandlePointerDown(x,y);
+};
+
+// ========== LOOP ==========
 let lastTime=performance.now();
 function loop(now){
   const dt=Math.min(0.1,(now-lastTime)/1000);
