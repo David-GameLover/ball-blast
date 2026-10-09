@@ -1516,16 +1516,24 @@ function killBall(b,i,hpBonus,speedBonus){
     }
     return bullets;
   }
-  draw(c){
+draw(c){
     const skinColor = getSkinColor();
     const glow = getSkin().glow;
-    c.save();
-    if(skinColor){ c.shadowColor = Game.rageActive ? '#ff0000' : glow; c.shadowBlur = Game.rageActive ? 30 : 15; }
-    c.fillStyle = skinColor || '#34495e';
-    c.fillRect(this.x-this.w/2, this.y-this.h/2, this.w, this.h);
-    c.restore();
-    c.fillStyle = skinColor || '#2c3e50';
-    c.fillRect(this.x-8, this.y-this.h, 16, this.h);
+    if(this.image){
+      c.save();
+      c.shadowColor = Game.rageActive ? '#ff0000' : glow;
+      c.shadowBlur = Game.rageActive ? 30 : 15;
+      c.drawImage(this.image, this.x-this.w/2, this.y-this.h/2, this.w, this.h);
+      c.restore();
+    } else {
+      c.save();
+      if(skinColor){ c.shadowColor = Game.rageActive ? '#ff0000' : glow; c.shadowBlur = Game.rageActive ? 30 : 15; }
+      c.fillStyle = skinColor || '#34495e';
+      c.fillRect(this.x-this.w/2, this.y-this.h/2, this.w, this.h);
+      c.restore();
+      c.fillStyle = skinColor || '#2c3e50';
+      c.fillRect(this.x-8, this.y-this.h, 16, this.h);
+    }
     if(Game.rageActive){
       const t=performance.now()*0.005;
       const r=Math.floor(128+127*Math.sin(t));
@@ -1549,7 +1557,6 @@ function killBall(b,i,hpBonus,speedBonus){
     }
   }
 }
-
 const BTN = { pause:{x:W-90,y:15,w:75,h:75} };
 
 function getPos(cx,cy){
